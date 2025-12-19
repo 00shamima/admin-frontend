@@ -9,17 +9,15 @@ const AdminContacts = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Format date
-  const formatDate = (dateString) =>
-    new Date(dateString).toLocaleString();
+  const formatDate = (dateString) => new Date(dateString).toLocaleString();
 
-  // 🔥 FETCH CONTACT MESSAGES (WITH JWT)
   const fetchMessages = useCallback(async () => {
     setLoading(true);
     setError("");
 
     try {
-      const token = localStorage.getItem("adminToken");
+      // FIX: local storage-il irundhu 'token' edukkavum
+      const token = localStorage.getItem("token"); 
 
       const response = await apiService.get(
         `/contact?page=${page}&limit=${limit}`,
@@ -33,11 +31,8 @@ const AdminContacts = () => {
       setMessages(response.data.contacts || []);
       setTotal(response.data.total || 0);
     } catch (err) {
-      console.error(
-        "Fetch error:",
-        err.response?.data || err.message
-      );
-      setError("Failed to load contact messages. Check API/Auth.");
+      console.error("Fetch error:", err.response?.data || err.message);
+      setError("Failed to load contact messages.");
       setMessages([]);
     } finally {
       setLoading(false);
@@ -48,25 +43,15 @@ const AdminContacts = () => {
     fetchMessages();
   }, [fetchMessages]);
 
-  // 🔥 DELETE CONTACT
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this message permanently?")) return;
-
+    if (!window.confirm("Delete this message?")) return;
     try {
-      const token = localStorage.getItem("adminToken");
-
+      const token = localStorage.getItem("token");
       await apiService.delete(`/contact/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-
       fetchMessages();
     } catch (err) {
-      console.error(
-        "Delete error:",
-        err.response?.data || err.message
-      );
       alert("Failed to delete message");
     }
   };
@@ -74,86 +59,31 @@ const AdminContacts = () => {
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="max-w-4xl mx-auto p-8 bg-white shadow rounded">
-      <h2 className="text-3xl font-bold mb-6 border-b pb-2">
-        ✉️ Contact Messages
-      </h2>
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
-          {error}
-        </div>
-      )}
-
+    <div className="max-w-4xl mx-auto p-8 bg-white shadow rounded text-gray-800">
+      <h2 className="text-3xl font-bold mb-6 border-b pb-2">✉️ Contact Messages</h2>
+      {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{error}</div>}
+      
       {loading ? (
-        <p>Loading messages...</p>
-      ) : messages.length === 0 ? (
-        <p className="text-gray-500">No contact messages found.</p>
+        <p>Loading...</p>
       ) : (
-        <>
-          <div className="space-y-4">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className="border rounded p-4 bg-gray-50"
-              >
-                <div className="flex justify-between">
-                  <div>
-                    <h3 className="font-semibold text-lg">
-                      {msg.name}
-                    </h3>
-                    <p className="text-sm text-blue-600">
-                      {msg.email}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {formatDate(msg.createdAt)}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => handleDelete(msg.id)}
-                    className="text-red-600 hover:text-red-800"
-                  >
-                    Delete
-                  </button>
-                </div>
-
-                <p className="mt-3 text-gray-700 whitespace-pre-wrap">
-                  {msg.message}
-                </p>
+        <div className="space-y-4">
+          {messages.map((msg) => (
+            <div key={msg.id} className="border rounded p-4 bg-gray-50 flex justify-between items-start">
+              <div>
+                <h3 className="font-semibold">{msg.name} ({msg.email})</h3>
+                <p className="text-xs text-gray-500">{formatDate(msg.createdAt)}</p>
+                <p className="mt-2 text-gray-700">{msg.message}</p>
               </div>
-            ))}
-          </div>
-
-          {/* PAGINATION */}
-          <div className="flex justify-between items-center mt-6">
-            <p className="text-sm text-gray-600">
-              Showing {messages.length} of {total}
-            </p>
-
-            <div className="flex items-center gap-2">
-              <button
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
-                className="px-3 py-1 border rounded disabled:opacity-50"
-              >
-                Previous
-              </button>
-
-              <span>
-                Page {page} of {totalPages || 1}
-              </span>
-
-              <button
-                disabled={page === totalPages}
-                onClick={() => setPage(page + 1)}
-                className="px-3 py-1 border rounded disabled:opacity-50"
-              >
-                Next
-              </button>
+              <button onClick={() => handleDelete(msg.id)} className="text-red-600 hover:underline">Delete</button>
             </div>
+          ))}
+          {/* Pagination Controls */}
+          <div className="flex justify-between mt-6">
+             <button disabled={page === 1} onClick={() => setPage(page-1)} className="px-4 py-2 border rounded disabled:opacity-50">Previous</button>
+             <span>Page {page} of {totalPages}</span>
+             <button disabled={page === totalPages} onClick={() => setPage(page+1)} className="px-4 py-2 border rounded disabled:opacity-50">Next</button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

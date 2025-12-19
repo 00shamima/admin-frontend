@@ -1,152 +1,185 @@
 import React, { useState, useEffect } from 'react';
 import apiService from '../api/apiService';
 
-const JourneyForm = ({ entry, onClose, onSuccess }) => { // Changed prop name to 'entry'
+const JourneyForm = ({ entry, onClose, onSuccess }) => {
+  const [type, setType] = useState('experience'); // experience OR education
   const [formData, setFormData] = useState({
-    companyName: '',
-    jobTitle: '',
+    mainTitle: '', // role allathu degree
+    subTitle: '',  // company allathu institution
     description: '',
-    location: '',
-    startDate: '', // YYYY-MM-DD format for date input
-    endDate: '',   // YYYY-MM-DD format for date input
+    startDate: '',
+    endDate: '',
     isCurrent: false,
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  // Convert Date objects to YYYY-MM-DD string for input[type=date]
-  const dateToInput = (dateString) => {
-    if (!dateString) return '';
-    return new Date(dateString).toISOString().split('T')[0];
-  };
-
-  // 1. Initialize form data if editing
+  // Edit mode-il irunthaal data-vai fill seiya
   useEffect(() => {
     if (entry) {
-      const isCurrentJob = !entry.endDate;
+      const entryType = entry.role ? 'experience' : 'education';
+      setType(entryType);
       setFormData({
-        companyName: entry.companyName,
-        jobTitle: entry.jobTitle,
-        description: entry.description,
-        location: entry.location || '',
-        startDate: dateToInput(entry.startDate),
-        endDate: dateToInput(entry.endDate),
-        isCurrent: isCurrentJob,
+        mainTitle: entry.role || entry.degree,
+        subTitle: entry.company || entry.institution,
+        description: entry.description || '',
+        startDate: entry.startDate ? new Date(entry.startDate).toISOString().split('T')[0] : '',
+        endDate: entry.endDate ? new Date(entry.endDate).toISOString().split('T')[0] : '',
+        isCurrent: !entry.endDate,
       });
     }
   }, [entry]);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    
-    if (name === 'isCurrent') {
-        // If 'Currently Working' is checked, clear endDate
-        setFormData(prev => ({ 
-            ...prev, 
-            isCurrent: checked,
-            endDate: checked ? '' : prev.endDate // Clear endDate if checked
-        }));
-    } else {
-        setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-
-    // Prepare data for submission
-    const dataToSend = {
-      companyName: formData.companyName,
-      jobTitle: formData.jobTitle,
+    
+    // Prisma model-ukku etrapol payload preparation
+    const payload = {
       description: formData.description,
-      location: formData.location,
       startDate: formData.startDate,
-      // If isCurrent is true, send null for endDate. Otherwise, send the date string.
-      endDate: formData.isCurrent ? null : formData.endDate, 
+      endDate: formData.isCurrent ? null : formData.endDate,
     };
 
-    // Simple validation
-    if (!dataToSend.startDate) {
-        setError("Start Date is required.");
-        setLoading(false);
-        return;
-    }
-    if (!dataToSend.isCurrent && !dataToSend.endDate) {
-        setError("End Date is required if 'Currently Working' is unchecked.");
-        setLoading(false);
-        return;
+    if (type === 'experience') {
+      payload.role = formData.mainTitle;
+      payload.company = formData.subTitle;
+    } else {
+      payload.degree = formData.mainTitle;
+      payload.institution = formData.subTitle;
     }
 
     try {
+      // BACKEND ENDPOINT FIX: 
+      // Add seiyum pothu: /experience/experience ALLATHU /experience/education
+      const endpoint = `/experience/${type}${entry ? `/${entry.id}` : ''}`;
+      
       if (entry) {
-        // Update (PUT) - assuming the backend route remains /experience/:id
-        await apiService.put(`/experience/${entry.id}`, dataToSend); 
+        await apiService.put(endpoint, payload);
       } else {
-        // Create (POST) - assuming the backend route remains /experience
-        await apiService.post('/experience', dataToSend); 
+        await apiService.post(endpoint, payload);
       }
-      onSuccess(); // Close modal and refresh list
+      
+      onSuccess(); // Table-ai refresh seiya
     } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.error || 'Submission failed.');
+      console.error("Save Error:", err);
+      alert("Error: " + (err.response?.data?.error || "Failed to save journey item"));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-xl">
-      <h3 className="text-2xl font-semibold mb-4 border-b pb-2">
-        {entry ? 'Edit Journey Entry' : 'Add New Journey Entry'}
-      </h3>
+    <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg text-gray-800 border border-gray-100">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-black text-gray-900">
+          {entry ? 'EDIT' : 'ADD'} <span className="text-purple-600">JOURNEY</span>
+        </h2>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+      </div>
       
-      {error && <div className="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded">{error}</div>}
+      {/* Type Switcher (Only for new entries) */}
+      {!entry && (
+        <div className="flex gap-2 mb-6 bg-gray-100 p-1.5 rounded-xl">
+          <button 
+            type="button"
+            onClick={() => setType('experience')} 
+            className={`flex-1 py-2 rounded-lg font-bold transition-all ${type === 'experience' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500'}`}
+          >
+            Work
+          </button>
+          <button 
+            type="button"
+            onClick={() => setType('education')} 
+            className={`flex-1 py-2 rounded-lg font-bold transition-all ${type === 'education' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500'}`}
+          >
+            Education
+          </button>
+        </div>
+      )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Company and Title */}
-        <input name="companyName" value={formData.companyName} onChange={handleChange} placeholder="Company / Institution Name" required className="w-full p-2 border rounded" />
-        <input name="jobTitle" value={formData.jobTitle} onChange={handleChange} placeholder="Role / Degree / Milestone Title" required className="w-full p-2 border rounded" />
-        <input name="location" value={formData.location} onChange={handleChange} placeholder="Location (e.g., Chennai, Online)" className="w-full p-2 border rounded" />
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="text-xs font-bold uppercase text-gray-400 mb-1 block">
+            {type === 'experience' ? "Role (e.g. Frontend Intern)" : "Degree (e.g. B.Tech IT)"}
+          </label>
+          <input 
+            className="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-purple-500 outline-none transition-all" 
+            value={formData.mainTitle} 
+            onChange={e => setFormData({...formData, mainTitle: e.target.value})} 
+            required 
+          />
+        </div>
 
-        {/* Description */}
-        <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Details or responsibilities (Optional)" rows="3" className="w-full p-2 border rounded" />
+        <div>
+          <label className="text-xs font-bold uppercase text-gray-400 mb-1 block">
+            {type === 'experience' ? "Company Name" : "School/College Name"}
+          </label>
+          <input 
+            className="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-purple-500 outline-none transition-all" 
+            value={formData.subTitle} 
+            onChange={e => setFormData({...formData, subTitle: e.target.value})} 
+            required 
+          />
+        </div>
 
-        {/* Date Fields */}
-        <div className="flex space-x-4">
+        <div>
+          <label className="text-xs font-bold uppercase text-gray-400 mb-1 block">Description</label>
+          <textarea 
+            className="w-full border-2 border-gray-100 p-3 rounded-xl h-24 focus:border-purple-500 outline-none transition-all resize-none" 
+            value={formData.description} 
+            onChange={e => setFormData({...formData, description: e.target.value})} 
+          />
+        </div>
+        
+        <div className="flex gap-4">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700">Start Date</label>
-            <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} required className="w-full p-2 border rounded mt-1" />
-          </div>
-          
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700">End Date</label>
+            <label className="text-xs font-bold uppercase text-gray-400 mb-1 block">Start Date</label>
             <input 
               type="date" 
-              name="endDate" 
-              value={formData.endDate} 
-              onChange={handleChange} 
-              disabled={formData.isCurrent} 
-              required={!formData.isCurrent} 
-              className="w-full p-2 border rounded mt-1 disabled:bg-gray-200" 
+              className="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-purple-500 outline-none" 
+              value={formData.startDate} 
+              onChange={e => setFormData({...formData, startDate: e.target.value})} 
+              required 
             />
           </div>
+          {!formData.isCurrent && (
+            <div className="flex-1">
+              <label className="text-xs font-bold uppercase text-gray-400 mb-1 block">End Date</label>
+              <input 
+                type="date" 
+                className="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-purple-500 outline-none" 
+                value={formData.endDate} 
+                onChange={e => setFormData({...formData, endDate: e.target.value})} 
+                required 
+              />
+            </div>
+          )}
         </div>
 
-        {/* Currently Working Checkbox */}
-        <div className="flex items-center pt-2">
-          <input type="checkbox" name="isCurrent" checked={formData.isCurrent} onChange={handleChange} id="isCurrent" className="mr-2 h-4 w-4 text-indigo-600 border-gray-300 rounded" />
-          <label htmlFor="isCurrent" className="text-gray-700">Ongoing / Current</label>
-        </div>
+        <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+          <input 
+            type="checkbox" 
+            className="w-4 h-4 accent-purple-600"
+            checked={formData.isCurrent} 
+            onChange={e => setFormData({...formData, isCurrent: e.target.checked})} 
+          /> 
+          I am currently working/studying here
+        </label>
 
-        {/* Buttons */}
-        <div className="flex justify-end space-x-3 pt-4">
-          <button type="button" onClick={onClose} disabled={loading} className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 transition">
+        <div className="flex gap-3 mt-4">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="flex-1 bg-gray-100 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-200 transition-all"
+          >
             Cancel
           </button>
-          <button type="submit" disabled={loading} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition disabled:opacity-50">
-            {loading ? 'Saving...' : (entry ? 'Update Entry' : 'Create Entry')}
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="flex-[2] bg-purple-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-purple-700 disabled:bg-purple-300 transition-all"
+          >
+            {loading ? 'SAVING...' : 'SAVE JOURNEY'}
           </button>
         </div>
       </form>

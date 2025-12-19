@@ -5,8 +5,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './index.css'; 
 
-// 1. **CRITICAL FIX A: ENSURE ALL IMPORTS ARE PRESENT**
-// Check your file paths are correct, e.g., './pages/LoginPage'
+
 import { AuthProvider } from './context/AuthContext'; 
 import AdminRoute from './Components/AdminRoute'; 
 import LoginPage from './pages/LoginPage'; // <--- Check this line and path!

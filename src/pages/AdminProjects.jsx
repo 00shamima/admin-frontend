@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import apiService from '../api/apiService';
-import ProjectForm from '../components/ProjectForm'; // We will create this next
+import ProjectForm from '../Components/ProjectForm'; // We will create this next
 
 const AdminProjects = () => {
   const [projects, setProjects] = useState([]);

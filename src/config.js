@@ -1,2 +1,2 @@
-// Replace with your actual backend URL
-export const API_BASE_URL = 'http://localhost:5000/api';
+// src/config.js
+export const API_BASE_URL = import.meta.env.VITE_API_URL || "https://portfolio-backend-y330.onrender.com/api";
