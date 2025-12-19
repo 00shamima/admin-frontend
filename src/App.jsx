@@ -1,6 +1,6 @@
 import React from 'react';
-// BrowserRouter-kku badhula HashRouter import pannunga
-import { HashRouter as Router, Routes, Route } from 'react-router-dom'; 
+// BrowserRouter-kku badhula HashRouter kandaipaaga irukkanum
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'; 
 import { AuthProvider } from './context/AuthContext'; 
 import AdminRoute from './Components/AdminRoute'; 
 import LoginPage from './pages/LoginPage';
@@ -14,21 +14,22 @@ import AdminContacts from './pages/AdminContacts';
 
 function App() {
   return (
-    // Router dhaan mela irukanum
     <Router>
       <AuthProvider>
           <Routes>
-              {/* Public Route */}
-              <Route path="/" element={<h1>Hello World!</h1>} /> 
+              {/* ROOT PATH FIX: 
+                Ippo unga site-ai open seidha udane direct-a Login page varum.
+                "Hello World" text-ai naan remove seidhu vittaen.
+              */}
+              <Route path="/" element={<LoginPage />} /> 
               <Route path="/login" element={<LoginPage />} />
               
               {/* Admin Protected Routes */}
               <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-                <Route index element={
-                    <div className="p-8">
-                        <h1 className="text-4xl font-extrabold text-gray-800">Welcome Admin!</h1>
-                    </div>
-                } /> 
+                {/* Admin dashboard-ukku pona udane automatic-a home page-ukku redirect aagum 
+                */}
+                <Route index element={<Navigate to="home" replace />} /> 
+                
                 <Route path="home" element={<AdminHome />} />
                 <Route path="about" element={<AdminAbout />} />
                 <Route path="skills" element={<AdminSkills />} />
@@ -37,7 +38,8 @@ function App() {
                 <Route path="contacts" element={<AdminContacts />} />
               </Route>
               
-              <Route path="*" element={<h1>404 - Page Not Found</h1>} />
+              {/* 404 Route - Intha route-ai kandaipaaga HashRouter handle seiyum */}
+              <Route path="*" element={<div className="flex items-center justify-center h-screen"><h1>404 - Page Not Found</h1></div>} />
           </Routes>
       </AuthProvider>
     </Router>
